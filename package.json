@@ -1,0 +1,14 @@
+{
+  "name": "admin-qr-attendance-backend",
+  "version": "1.0.0",
+  "description": "Lightweight Node.js and SQLite backend for an admin QR attendance system.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "express": "^4.21.2"
+  }
+}
