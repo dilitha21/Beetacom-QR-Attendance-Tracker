@@ -21,6 +21,33 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  sqflite_common_ffi: ^2.3.7+1
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/branding/logo.jpg
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/logo.jpg
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: assets/branding/logo.jpg
+    background_color: "#020617"
+    theme_color: "#2563EB"
+  windows:
+    generate: true
+    image_path: assets/branding/logo.jpg
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: assets/branding/logo.jpg
+  linux:
+    generate: true
+    image_path: assets/branding/logo.jpg
+  adaptive_icon_background: "#020617"
+  adaptive_icon_foreground: assets/branding/logo.jpg

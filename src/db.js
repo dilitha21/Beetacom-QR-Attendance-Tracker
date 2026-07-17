@@ -17,7 +17,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     unique_student_id TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL,
-    grade TEXT,
+    "index" TEXT,
     contact TEXT,
     photo_url TEXT
   );
@@ -25,6 +25,9 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS Attendance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     unique_student_id TEXT NOT NULL,
+    class_name TEXT,
+    time_slot TEXT,
+    date TEXT,
     timestamp TEXT NOT NULL,
     sync_status TEXT NOT NULL DEFAULT 'synced'
   );
@@ -57,11 +60,18 @@ async function runWithRetry(operation, { retries = 10, delayMs = 2000 } = {}) {
 
 function insertAttendanceRecord(record) {
   const statement = db.prepare(`
-    INSERT INTO Attendance (unique_student_id, timestamp, sync_status)
-    VALUES (?, ?, ?)
+    INSERT INTO Attendance (unique_student_id, class_name, time_slot, date, timestamp, sync_status)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
 
-  return statement.run(record.unique_student_id, record.timestamp, record.sync_status ?? 'synced');
+  return statement.run(
+    record.unique_student_id,
+    record.class_name || null,
+    record.time_slot || null,
+    record.date || null,
+    record.timestamp,
+    record.sync_status ?? 'synced'
+  );
 }
 
 const insertAttendanceRecords = db.transaction((records) => {

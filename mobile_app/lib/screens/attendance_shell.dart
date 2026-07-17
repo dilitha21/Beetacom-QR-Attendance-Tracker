@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'scanner_screen.dart';
+import 'session_setup_screen.dart';
 import 'student_registration_screen.dart';
+import 'dashboard_screen.dart';
 
 class AttendanceShell extends StatefulWidget {
   const AttendanceShell({super.key});
@@ -14,8 +15,9 @@ class _AttendanceShellState extends State<AttendanceShell> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = const [
-    ScannerScreen(),
+    SessionSetupScreen(),
     StudentRegistrationScreen(),
+    DashboardScreen(),
   ];
 
   @override
@@ -35,11 +37,15 @@ class _AttendanceShellState extends State<AttendanceShell> {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.qr_code_scanner),
-            label: 'Scanner',
+            label: 'Scan',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_add_alt_1),
             label: 'Register',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.dashboard),
+            label: 'Dashboard',
           ),
         ],
       ),

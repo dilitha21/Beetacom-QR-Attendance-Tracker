@@ -1,74 +1,25 @@
-# QR-Attendance-App
+# Beetacom-QR-Attendance-Tracker
 
-Monorepo for the offline-first QR attendance system.
+An offline-first, admin-only QR Attendance Tracking System.
 
-## Backend
+## Features
 
-Lightweight Node.js + Express API backed by a local SQLite database file.
+- **Session Setup**: Configure specific classes, dates, and time slots before beginning a session.
+- **QR Scanner**: Fast mobile QR scanning to mark students present instantly.
+- **Anti-Fraud Verification**: Instantly displays student's photo and details upon successful scan for visual confirmation.
+- **Manual Entry Fallback**: Supports typing the student's index manually if their QR card is unreadable.
+- **Offline First**: All attendance is marked locally via SQLite, allowing completely offline operation.
+- **Attendance Dashboard**: View real-time, filterable offline attendance records locally.
+- **Sync Engine**: Automatically synchronizes pending attendance records to the central backend when internet is restored.
 
-## Mobile App
+## Technologies Used
 
-Flutter app in [mobile_app](mobile_app) with offline local storage, student registration, scanner, manual entry, and sync logic.
+### Mobile App (Admin Client)
+- **Flutter** (Dart)
+- **SQLite** (`sqflite`) for robust offline data storage
+- **Mobile Scanner** for fast QR code detection
 
-## Requirements
-
-- Node.js 18 or newer
-- npm
-
-## Install
-
-```bash
-npm install
-```
-
-## Run
-
-```bash
-npm start
-```
-
-Development mode with automatic restart support from Node:
-
-```bash
-npm run dev
-```
-
-## Database
-
-The SQLite database is created automatically at:
-
-```text
-data/attendance.db
-```
-
-## API
-
-### `POST /api/sync-attendance`
-
-Request body:
-
-```json
-{
-  "attendanceRecords": [
-    {
-      "unique_student_id": "STU-001",
-      "timestamp": "2026-07-16T09:00:00.000Z",
-      "sync_status": "synced"
-    }
-  ]
-}
-```
-
-Response:
-
-```json
-{
-  "message": "Attendance synced successfully",
-  "insertedCount": 1,
-  "inserted": ["STU-001"]
-}
-```
-
-### `GET /health`
-
-Returns server status and the database path.
+### Central Backend
+- **Node.js & Express.js**
+- **SQLite** (`better-sqlite3`) for lightweight central storage
+- **Custom Retry Logic** to handle concurrent write locks in SQLite

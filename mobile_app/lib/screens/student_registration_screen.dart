@@ -14,7 +14,7 @@ class StudentRegistrationScreen extends StatefulWidget {
 class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _gradeController = TextEditingController();
+  final _indexController = TextEditingController();
   final _contactController = TextEditingController();
   final _photoUrlController = TextEditingController();
 
@@ -24,7 +24,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _gradeController.dispose();
+    _indexController.dispose();
     _contactController.dispose();
     _photoUrlController.dispose();
     super.dispose();
@@ -44,7 +44,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
       final student = Student(
         uniqueStudentId: uniqueStudentId,
         name: _nameController.text.trim(),
-        grade: _gradeController.text.trim(),
+        index: _indexController.text.trim(),
         contact: _contactController.text.trim(),
         photoUrl: _photoUrlController.text.trim().isEmpty ? null : _photoUrlController.text.trim(),
       );
@@ -54,7 +54,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
       setState(() {
         _generatedStudentId = uniqueStudentId;
         _nameController.clear();
-        _gradeController.clear();
+        _indexController.clear();
         _contactController.clear();
         _photoUrlController.clear();
       });
@@ -91,7 +91,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF0F172A), Color(0xFF134E4A), Color(0xFFE2E8F0)],
+            colors: [Color(0xFF020617), Color(0xFF0F172A), Color(0xFF1D4ED8)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -104,7 +104,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                 constraints: const BoxConstraints(maxWidth: 520),
                 child: Card(
                   elevation: 12,
-                  color: Colors.white.withValues(alpha: 0.96),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.96),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                   child: Padding(
                     padding: const EdgeInsets.all(24),
@@ -113,6 +113,39 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Image.asset(
+                                  'assets/branding/logo.jpg',
+                                  width: 52,
+                                  height: 52,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'BMCS',
+                                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Register students for scanning and attendance sync.',
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: const Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
                           Text(
                             'Student Registration',
                             style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -120,7 +153,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                           const SizedBox(height: 8),
                           Text(
                             'Register students locally while offline. A unique student ID is generated on save.',
-                            style: theme.textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                            style: theme.textTheme.bodyMedium?.copyWith(color: const Color(0xFF94A3B8)),
                           ),
                           const SizedBox(height: 24),
                           TextFormField(
@@ -138,14 +171,14 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                           ),
                           const SizedBox(height: 16),
                           TextFormField(
-                            controller: _gradeController,
+                            controller: _indexController,
                             decoration: const InputDecoration(
-                              labelText: 'Grade',
+                              labelText: 'Index',
                               border: OutlineInputBorder(),
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
-                                return 'Grade is required';
+                                return 'Index is required';
                               }
                               return null;
                             },
@@ -179,7 +212,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                             onPressed: _isSaving ? null : _saveStudent,
                             style: FilledButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              backgroundColor: const Color(0xFF0F766E),
+                              backgroundColor: const Color(0xFF2563EB),
                             ),
                             child: _isSaving
                                 ? const SizedBox(
@@ -194,8 +227,9 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                             Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE0F2FE),
+                                color: const Color(0xFF111827),
                                 borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFF1E293B)),
                               ),
                               child: Column(
                                 children: [
@@ -213,7 +247,7 @@ class _StudentRegistrationScreenState extends State<StudentRegistrationScreen> {
                                   Text(
                                     'This QR encodes the student ID used by the scanner.',
                                     textAlign: TextAlign.center,
-                                    style: theme.textTheme.bodySmall?.copyWith(color: Colors.black54),
+                                    style: theme.textTheme.bodySmall?.copyWith(color: const Color(0xFF94A3B8)),
                                   ),
                                 ],
                               ),

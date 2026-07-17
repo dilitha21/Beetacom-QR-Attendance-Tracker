@@ -2,7 +2,7 @@ class Student {
   final int? id;
   final String uniqueStudentId;
   final String name;
-  final String grade;
+  final String index;
   final String contact;
   final String? photoUrl;
 
@@ -10,7 +10,7 @@ class Student {
     this.id,
     required this.uniqueStudentId,
     required this.name,
-    required this.grade,
+    required this.index,
     required this.contact,
     this.photoUrl,
   });
@@ -20,7 +20,7 @@ class Student {
       id: map['id'] as int?,
       uniqueStudentId: map['unique_student_id'] as String,
       name: map['name'] as String,
-      grade: map['grade'] as String,
+      index: map['student_index'] as String,
       contact: map['contact'] as String,
       photoUrl: map['photo_url'] as String?,
     );
@@ -31,7 +31,7 @@ class Student {
       'id': id,
       'unique_student_id': uniqueStudentId,
       'name': name,
-      'grade': grade,
+      'student_index': index,
       'contact': contact,
       'photo_url': photoUrl,
     };

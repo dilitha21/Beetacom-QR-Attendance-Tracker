@@ -67,6 +67,9 @@ class AttendanceSyncService {
               'unique_student_id': row['unique_student_id'],
               'timestamp': row['timestamp'],
               'sync_status': row['sync_status'],
+              'class_name': row['class_name'],
+              'time_slot': row['time_slot'],
+              'date': row['date'],
             },
           )
           .toList(),

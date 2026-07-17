@@ -6,7 +6,16 @@ import '../models/student.dart';
 import '../services/attendance_sync_service.dart';
 
 class ScannerScreen extends StatefulWidget {
-  const ScannerScreen({super.key});
+  final String className;
+  final String timeSlot;
+  final String date;
+
+  const ScannerScreen({
+    super.key,
+    required this.className,
+    required this.timeSlot,
+    required this.date,
+  });
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
@@ -119,7 +128,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
         return;
       }
 
-      await AppDatabase.instance.markStudentPresent(uniqueStudentId);
+      await AppDatabase.instance.markStudentPresent(
+        uniqueStudentId,
+        className: widget.className,
+        timeSlot: widget.timeSlot,
+        date: widget.date,
+      );
       await _loadTodayHistory();
 
       if (!mounted) {
@@ -206,7 +220,22 @@ class _ScannerScreenState extends State<ScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scanner'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                'assets/branding/logo.jpg',
+                width: 28,
+                height: 28,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text('BMCS'),
+          ],
+        ),
         centerTitle: true,
         actions: [
           IconButton(
@@ -225,7 +254,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF07111F), Color(0xFF134E4A), Color(0xFFF8FAFC)],
+            colors: [Color(0xFF020617), Color(0xFF0F172A), Color(0xFF1E3A8A)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -235,7 +264,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
             padding: const EdgeInsets.all(20),
             children: [
               Card(
-                color: Colors.white.withValues(alpha: 0.95),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.96),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                 elevation: 12,
                 child: Padding(
@@ -243,6 +272,41 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Row(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: Image.asset(
+                              'assets/branding/logo.jpg',
+                              width: 54,
+                              height: 54,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'BMCS',
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Dark mode attendance scanning with quick sync.',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: const Color(0xFF94A3B8),
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         'Live QR Scanner',
                         style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -253,7 +317,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                       Text(
                         'Scan the student QR or enter the ID manually if the code is damaged.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.black54,
+                              color: const Color(0xFF94A3B8),
                             ),
                       ),
                       const SizedBox(height: 16),
@@ -275,7 +339,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0F766E),
+                              color: const Color(0xFF38BDF8),
                             ),
                       ),
                     ],
@@ -284,7 +348,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
               ),
               const SizedBox(height: 20),
               Card(
-                color: Colors.white.withValues(alpha: 0.95),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.96),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                 elevation: 12,
                 child: Padding(
@@ -321,7 +385,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                         label: const Text('Mark Present'),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(52),
-                          backgroundColor: const Color(0xFF134E4A),
+                          backgroundColor: const Color(0xFF2563EB),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -331,8 +395,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
                         label: const Text('Sync Pending Attendance'),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size.fromHeight(52),
-                          side: const BorderSide(color: Color(0xFF134E4A)),
-                          foregroundColor: const Color(0xFF134E4A),
+                          side: const BorderSide(color: Color(0xFF38BDF8)),
+                          foregroundColor: const Color(0xFF7DD3FC),
                         ),
                       ),
                     ],
@@ -341,7 +405,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
               ),
               const SizedBox(height: 20),
               Card(
-                color: Colors.white.withValues(alpha: 0.95),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.96),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                 elevation: 12,
                 child: Padding(
@@ -351,7 +415,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.history, color: Color(0xFF134E4A)),
+                          const Icon(Icons.history, color: Color(0xFF38BDF8)),
                           const SizedBox(width: 8),
                           Text(
                             'Today\'s Attendance',
@@ -366,7 +430,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                         Text(
                           'No attendance has been recorded yet today.',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.black54,
+                                color: const Color(0xFF94A3B8),
                               ),
                         )
                       else
@@ -376,15 +440,15 @@ class _ScannerScreenState extends State<ScannerScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
+                                color: const Color(0xFF111827),
                                 borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                border: Border.all(color: const Color(0xFF1E293B)),
                               ),
                               child: Row(
                                 children: [
                                   CircleAvatar(
                                     radius: 24,
-                                    backgroundColor: const Color(0xFF0F766E),
+                                    backgroundColor: const Color(0xFF2563EB),
                                     child: Text(
                                       item.initials,
                                       style: const TextStyle(
@@ -408,7 +472,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                                         Text(
                                           '${item.uniqueStudentId} • ${item.status}',
                                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                color: Colors.black54,
+                                                color: const Color(0xFF94A3B8),
                                               ),
                                         ),
                                       ],
@@ -418,7 +482,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                                     item.shortTime,
                                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                           fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF134E4A),
+                                          color: const Color(0xFF7DD3FC),
                                         ),
                                   ),
                                 ],
@@ -473,7 +537,7 @@ class _StudentVerificationAvatar extends StatelessWidget {
 
     return CircleAvatar(
       radius: 78,
-      backgroundColor: const Color(0xFF0F766E),
+      backgroundColor: const Color(0xFF2563EB),
       child: Text(
         initials.toUpperCase(),
         style: const TextStyle(
