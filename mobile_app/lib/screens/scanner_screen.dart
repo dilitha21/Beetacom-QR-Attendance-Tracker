@@ -6,16 +6,7 @@ import '../models/student.dart';
 import '../services/attendance_sync_service.dart';
 
 class ScannerScreen extends StatefulWidget {
-  final String className;
-  final String timeSlot;
-  final String date;
-
-  const ScannerScreen({
-    super.key,
-    required this.className,
-    required this.timeSlot,
-    required this.date,
-  });
+  const ScannerScreen({super.key});
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
@@ -116,24 +107,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
         return;
       }
 
-      final alreadyMarkedToday = await AppDatabase.instance.hasAttendanceForDay(uniqueStudentId, DateTime.now());
-      if (alreadyMarkedToday) {
-        if (!mounted) {
-          return;
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${student.name} is already marked present today.')),
-        );
-        return;
-      }
-
-      await AppDatabase.instance.markStudentPresent(
-        uniqueStudentId,
-        className: widget.className,
-        timeSlot: widget.timeSlot,
-        date: widget.date,
-      );
+      final action = await AppDatabase.instance.recordAttendance(uniqueStudentId);
       await _loadTodayHistory();
 
       if (!mounted) {
@@ -141,6 +115,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
       }
 
       _manualEntryController.clear();
+
+      final isCheckIn = action == 'check_in';
+      final actionColor = isCheckIn ? const Color(0xFF10B981) : const Color(0xFF3B82F6); // Green for Check-in, Blue for Check-out
+      final actionText = isCheckIn ? 'Checked In' : 'Checked Out';
 
       await showDialog<void>(
         context: context,
@@ -154,7 +132,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _StudentVerificationAvatar(student: student),
+                  _StudentVerificationAvatar(student: student, actionColor: actionColor),
                   const SizedBox(height: 20),
                   Text(
                     student.name,
@@ -165,7 +143,16 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Marked Present via ${source.toLowerCase()}.\nID: ${student.uniqueStudentId}',
+                    actionText,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(dialogContext).textTheme.titleLarge?.copyWith(
+                          color: actionColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'ID: ${student.uniqueStudentId}',
                     textAlign: TextAlign.center,
                     style: Theme.of(dialogContext).textTheme.titleMedium?.copyWith(
                           color: Colors.black54,
@@ -176,7 +163,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     onPressed: () => Navigator.of(dialogContext).pop(),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(52),
-                      backgroundColor: const Color(0xFF0F766E),
+                      backgroundColor: actionColor,
                     ),
                     child: const Text('Continue Scanning'),
                   ),
@@ -189,7 +176,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to mark attendance: $error')),
+          SnackBar(content: Text('Failed to record attendance: $error')),
         );
       }
     } finally {
@@ -233,7 +220,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            const Text('BMCS'),
+            const Text('BMCS Scanner'),
           ],
         ),
         centerTitle: true,
@@ -289,14 +276,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'BMCS',
+                                  'BMCS Scanner',
                                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                         fontWeight: FontWeight.w900,
                                       ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Dark mode attendance scanning with quick sync.',
+                                  'Smart Check-In / Check-Out system.',
                                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         color: const Color(0xFF94A3B8),
                                       ),
@@ -382,21 +369,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
                                   source: 'manual entry',
                                 ),
                         icon: const Icon(Icons.check_circle_outline),
-                        label: const Text('Mark Present'),
+                        label: const Text('Record Attendance'),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size.fromHeight(52),
                           backgroundColor: const Color(0xFF2563EB),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: _isSyncing ? null : _syncPendingAttendance,
-                        icon: const Icon(Icons.cloud_sync_outlined),
-                        label: const Text('Sync Pending Attendance'),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(52),
-                          side: const BorderSide(color: Color(0xFF38BDF8)),
-                          foregroundColor: const Color(0xFF7DD3FC),
                         ),
                       ),
                     ],
@@ -448,7 +424,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 24,
-                                    backgroundColor: const Color(0xFF2563EB),
+                                    backgroundColor: item.checkOutTime != null ? const Color(0xFF3B82F6) : const Color(0xFF10B981),
                                     child: Text(
                                       item.initials,
                                       style: const TextStyle(
@@ -470,7 +446,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          '${item.uniqueStudentId} • ${item.status}',
+                                          item.uniqueStudentId,
                                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                 color: const Color(0xFF94A3B8),
                                               ),
@@ -478,12 +454,25 @@ class _ScannerScreenState extends State<ScannerScreen> {
                                       ],
                                     ),
                                   ),
-                                  Text(
-                                    item.shortTime,
-                                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF7DD3FC),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        'In: ${item.shortTime(item.checkInTime)}',
+                                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                              color: const Color(0xFF10B981),
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      if (item.checkOutTime != null)
+                                        Text(
+                                          'Out: ${item.shortTime(item.checkOutTime!)}',
+                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                                color: const Color(0xFF3B82F6),
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                         ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -503,9 +492,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
 }
 
 class _StudentVerificationAvatar extends StatelessWidget {
-  const _StudentVerificationAvatar({required this.student});
+  const _StudentVerificationAvatar({required this.student, required this.actionColor});
 
   final Student student;
+  final Color actionColor;
 
   @override
   Widget build(BuildContext context) {
@@ -527,7 +517,13 @@ class _StudentVerificationAvatar extends StatelessWidget {
       avatar = _fallbackAvatar();
     }
 
-    return avatar;
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: actionColor, width: 6),
+      ),
+      child: avatar,
+    );
   }
 
   Widget _fallbackAvatar() {
@@ -537,7 +533,7 @@ class _StudentVerificationAvatar extends StatelessWidget {
 
     return CircleAvatar(
       radius: 78,
-      backgroundColor: const Color(0xFF2563EB),
+      backgroundColor: actionColor,
       child: Text(
         initials.toUpperCase(),
         style: const TextStyle(
@@ -553,8 +549,9 @@ class _StudentVerificationAvatar extends StatelessWidget {
 class _AttendanceHistoryItem {
   final int? id;
   final String uniqueStudentId;
-  final String timestamp;
-  final String status;
+  final String date;
+  final String checkInTime;
+  final String? checkOutTime;
   final String syncStatus;
   final String name;
   final String? photoUrl;
@@ -562,8 +559,9 @@ class _AttendanceHistoryItem {
   const _AttendanceHistoryItem({
     required this.id,
     required this.uniqueStudentId,
-    required this.timestamp,
-    required this.status,
+    required this.date,
+    required this.checkInTime,
+    this.checkOutTime,
     required this.syncStatus,
     required this.name,
     required this.photoUrl,
@@ -573,15 +571,16 @@ class _AttendanceHistoryItem {
     return _AttendanceHistoryItem(
       id: map['id'] as int?,
       uniqueStudentId: map['unique_student_id'] as String,
-      timestamp: map['timestamp'] as String,
-      status: map['status'] as String,
+      date: map['date'] as String,
+      checkInTime: map['check_in_time'] as String,
+      checkOutTime: map['check_out_time'] as String?,
       syncStatus: map['sync_status'] as String,
       name: (map['name'] as String?) ?? 'Unknown Student',
       photoUrl: map['photo_url'] as String?,
     );
   }
 
-  String get shortTime {
+  String shortTime(String timestamp) {
     final parsed = DateTime.tryParse(timestamp);
     if (parsed == null) {
       return timestamp;

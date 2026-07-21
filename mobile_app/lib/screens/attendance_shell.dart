@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'session_setup_screen.dart';
+import 'scanner_screen.dart';
 import 'student_registration_screen.dart';
 import 'dashboard_screen.dart';
 
@@ -15,7 +15,7 @@ class _AttendanceShellState extends State<AttendanceShell> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = const [
-    SessionSetupScreen(),
+    ScannerScreen(),
     StudentRegistrationScreen(),
     DashboardScreen(),
   ];

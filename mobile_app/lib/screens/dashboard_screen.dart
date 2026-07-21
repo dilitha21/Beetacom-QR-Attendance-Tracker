@@ -10,16 +10,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   DateTime _selectedDate = DateTime.now();
-  String _selectedClassName = '';
-  String _selectedTimeSlot = 'All';
-
-  final List<String> _timeSlots = [
-    'All',
-    'Morning (08:00 AM - 12:00 PM)',
-    'Afternoon (12:00 PM - 04:00 PM)',
-    'Evening (04:00 PM - 08:00 PM)',
-  ];
-
   List<Map<String, Object?>> _records = [];
   bool _isLoading = false;
 
@@ -34,11 +24,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _isLoading = true;
     });
 
-    final rows = await AppDatabase.instance.getFilteredAttendance(
-      _selectedDate,
-      className: _selectedClassName.isEmpty ? null : _selectedClassName,
-      timeSlot: _selectedTimeSlot == 'All' ? null : _selectedTimeSlot,
-    );
+    final rows = await AppDatabase.instance.getFilteredAttendance(_selectedDate);
 
     if (mounted) {
       setState(() {
@@ -63,6 +49,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  String _formatTime(String? timestamp) {
+    if (timestamp == null || timestamp.isEmpty) {
+      return '--:--';
+    }
+    final time = DateTime.tryParse(timestamp);
+    if (time == null) {
+      return '--:--';
+    }
+    final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
+  }
+
   @override
   Widget build(BuildContext context) {
     final formattedDate = "${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}";
@@ -85,80 +85,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Container(
               padding: const EdgeInsets.all(16.0),
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => _pickDate(context),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Date',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.calendar_today, size: 20),
-                              filled: true,
-                              fillColor: Colors.black26,
-                              isDense: true,
-                            ),
-                            child: Text(
-                              formattedDate,
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ),
+                  InkWell(
+                    onTap: () => _pickDate(context),
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Selected Date',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.calendar_today, size: 20),
+                        filled: true,
+                        fillColor: Colors.black26,
+                        isDense: true,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedTimeSlot,
-                          dropdownColor: const Color(0xFF1E293B),
-                          style: const TextStyle(color: Colors.white, fontSize: 14),
-                          decoration: const InputDecoration(
-                            labelText: 'Time Slot',
-                            border: OutlineInputBorder(),
-                            filled: true,
-                            fillColor: Colors.black26,
-                            isDense: true,
-                          ),
-                          items: _timeSlots.map((String slot) {
-                            return DropdownMenuItem<String>(
-                              value: slot,
-                              child: Text(slot, overflow: TextOverflow.ellipsis),
-                            );
-                          }).toList(),
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              _selectedTimeSlot = newValue!;
-                            });
-                            _loadData();
-                          },
-                        ),
+                      child: Text(
+                        formattedDate,
+                        style: const TextStyle(color: Colors.white, fontSize: 16),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'Class Name Filter (Optional)',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.search, size: 20),
-                      filled: true,
-                      fillColor: Colors.black26,
-                      isDense: true,
                     ),
-                    onChanged: (value) {
-                      _selectedClassName = value;
-                      _loadData();
-                    },
                   ),
                   const SizedBox(height: 16),
                   Center(
                     child: Text(
-                      'Total Present: ${_records.length}',
+                      'Total Present Today: ${_records.length}',
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -175,7 +126,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   : _records.isEmpty
                       ? const Center(
                           child: Text(
-                            'No records found.',
+                            'No records found for this date.',
                             style: TextStyle(color: Colors.white54, fontSize: 16),
                           ),
                         )
@@ -186,54 +137,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             final record = _records[index];
                             final name = record['name']?.toString() ?? 'Unknown Student';
                             final uniqueId = record['unique_student_id']?.toString() ?? 'Unknown ID';
-                            final timeSlot = record['time_slot']?.toString() ?? 'Unknown Slot';
-                            final className = record['class_name']?.toString() ?? 'N/A';
-                            final timestampStr = record['timestamp']?.toString() ?? '';
+                            final checkInStr = record['check_in_time']?.toString();
+                            final checkOutStr = record['check_out_time']?.toString();
                             final syncStatus = record['sync_status']?.toString() ?? 'pending';
-
-                            DateTime? time;
-                            if (timestampStr.isNotEmpty) {
-                              time = DateTime.tryParse(timestampStr);
-                            }
-
-                            final timeString = time != null
-                                ? "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}"
-                                : 'Unknown Time';
 
                             return Card(
                               color: Colors.white10,
                               margin: const EdgeInsets.only(bottom: 12),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: Colors.blueAccent,
-                                  child: Text(
-                                    name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                                title: Text(
-                                  name,
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                                subtitle: Text(
-                                  '$uniqueId • $className\n$timeSlot',
-                                  style: const TextStyle(color: Colors.white70),
-                                ),
-                                isThreeLine: true,
-                                trailing: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
                                   children: [
-                                    Text(
-                                      timeString,
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                                    CircleAvatar(
+                                      backgroundColor: Colors.blueAccent,
+                                      radius: 24,
+                                      child: Text(
+                                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                        ),
+                                      ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Icon(
-                                      syncStatus == 'synced' ? Icons.cloud_done : Icons.cloud_upload,
-                                      size: 16,
-                                      color: syncStatus == 'synced' ? Colors.green : Colors.orange,
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            name,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            uniqueId,
+                                            style: const TextStyle(color: Colors.white70),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.login, size: 14, color: Colors.greenAccent),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              _formatTime(checkInStr),
+                                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.logout, size: 14, color: Colors.blueAccent),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              _formatTime(checkOutStr),
+                                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Icon(
+                                          syncStatus == 'synced' ? Icons.cloud_done : Icons.cloud_upload,
+                                          size: 16,
+                                          color: syncStatus == 'synced' ? Colors.green : Colors.orange,
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),

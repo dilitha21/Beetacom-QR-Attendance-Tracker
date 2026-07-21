@@ -48,8 +48,8 @@ class AttendanceApp extends StatelessWidget {
         navigationBarTheme: NavigationBarThemeData(
           backgroundColor: const Color(0xFF0F172A),
           indicatorColor: const Color(0xFF2563EB).withValues(alpha: 0.22),
-          labelTextStyle: MaterialStatePropertyAll(
-            const TextStyle(fontWeight: FontWeight.w700),
+          labelTextStyle: const WidgetStatePropertyAll(
+            TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(

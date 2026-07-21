@@ -10,7 +10,7 @@ class AppDatabase {
 
   static final AppDatabase instance = AppDatabase._();
   static const String _databaseName = 'attendance_mobile.db';
-  static const int _databaseVersion = 4;
+  static const int _databaseVersion = 5;
 
   Database? _database;
 
@@ -48,12 +48,11 @@ class AppDatabase {
       CREATE TABLE LocalAttendance (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         unique_student_id TEXT NOT NULL,
-        timestamp TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'Present',
+        date TEXT NOT NULL,
+        check_in_time TEXT,
+        check_out_time TEXT,
         sync_status TEXT NOT NULL DEFAULT 'pending',
-        class_name TEXT,
-        time_slot TEXT,
-        date TEXT
+        UNIQUE(unique_student_id, date)
       )
     ''');
   }
@@ -61,15 +60,26 @@ class AppDatabase {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE Students ADD COLUMN photo_url TEXT');
-      await db.execute("ALTER TABLE LocalAttendance ADD COLUMN status TEXT NOT NULL DEFAULT 'Present'");
-    }
-    if (oldVersion < 3) {
-      await db.execute("ALTER TABLE LocalAttendance ADD COLUMN class_name TEXT");
-      await db.execute("ALTER TABLE LocalAttendance ADD COLUMN time_slot TEXT");
-      await db.execute("ALTER TABLE LocalAttendance ADD COLUMN date TEXT");
     }
     if (oldVersion < 4) {
-      await db.execute("ALTER TABLE Students RENAME COLUMN grade TO student_index");
+      // Handle the rename that was in version 4 if oldVersion is < 4
+      try {
+        await db.execute("ALTER TABLE Students RENAME COLUMN grade TO student_index");
+      } catch (_) {}
+    }
+    if (oldVersion < 5) {
+      await db.execute('DROP TABLE IF EXISTS LocalAttendance');
+      await db.execute('''
+        CREATE TABLE LocalAttendance (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          unique_student_id TEXT NOT NULL,
+          date TEXT NOT NULL,
+          check_in_time TEXT,
+          check_out_time TEXT,
+          sync_status TEXT NOT NULL DEFAULT 'pending',
+          UNIQUE(unique_student_id, date)
+        )
+      ''');
     }
   }
 
@@ -115,17 +125,41 @@ class AppDatabase {
     return Student.fromMap(rows.first);
   }
 
-  Future<int> markStudentPresent(String uniqueStudentId, {DateTime? timestamp, String? className, String? timeSlot, String? date}) async {
+  Future<String> recordAttendance(String uniqueStudentId) async {
     final db = await database;
-    return db.insert('LocalAttendance', {
-      'unique_student_id': uniqueStudentId,
-      'timestamp': (timestamp ?? DateTime.now()).toIso8601String(),
-      'status': 'Present',
-      'sync_status': 'pending',
-      'class_name': className,
-      'time_slot': timeSlot,
-      'date': date,
-    });
+    final now = DateTime.now();
+    final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    final timestampStr = now.toIso8601String();
+
+    final existing = await db.query(
+      'LocalAttendance',
+      where: 'unique_student_id = ? AND date = ?',
+      whereArgs: [uniqueStudentId, dateStr],
+      limit: 1,
+    );
+
+    if (existing.isEmpty) {
+      // Check in
+      await db.insert('LocalAttendance', {
+        'unique_student_id': uniqueStudentId,
+        'date': dateStr,
+        'check_in_time': timestampStr,
+        'sync_status': 'pending',
+      });
+      return 'check_in';
+    } else {
+      // Check out
+      await db.update(
+        'LocalAttendance',
+        {
+          'check_out_time': timestampStr,
+          'sync_status': 'pending',
+        },
+        where: 'id = ?',
+        whereArgs: [existing.first['id']],
+      );
+      return 'check_out';
+    }
   }
 
   Future<List<Map<String, Object?>>> getUnsyncedAttendanceRecords() async {
@@ -134,7 +168,6 @@ class AppDatabase {
       'LocalAttendance',
       where: 'sync_status = ?',
       whereArgs: ['pending'],
-      orderBy: 'timestamp ASC',
     );
   }
 
@@ -147,25 +180,20 @@ class AppDatabase {
     return db.update(
       'LocalAttendance',
       {'sync_status': 'synced'},
-      where: 'id IN (${List.filled(ids.length, '?').join(',')})',
+      where: "id IN (${List.filled(ids.length, '?').join(',')})",
       whereArgs: ids,
     );
   }
 
   Future<bool> hasAttendanceForDay(String uniqueStudentId, DateTime day) async {
     final db = await database;
-    final startOfDay = DateTime(day.year, day.month, day.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-
+    final dateStr = "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
+    
     final rows = await db.query(
       'LocalAttendance',
       columns: const ['id'],
-      where: 'unique_student_id = ? AND timestamp >= ? AND timestamp < ?',
-      whereArgs: [
-        uniqueStudentId,
-        startOfDay.toIso8601String(),
-        endOfDay.toIso8601String(),
-      ],
+      where: 'unique_student_id = ? AND date = ?',
+      whereArgs: [uniqueStudentId, dateStr],
       limit: 1,
     );
 
@@ -175,76 +203,45 @@ class AppDatabase {
   Future<List<Map<String, Object?>>> getTodayAttendanceWithStudentNames() async {
     final db = await database;
     final now = DateTime.now();
-    final startOfDay = DateTime(now.year, now.month, now.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
+    final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
     return db.rawQuery('''
       SELECT
         LocalAttendance.id,
         LocalAttendance.unique_student_id,
-        LocalAttendance.timestamp,
-        LocalAttendance.status,
-        LocalAttendance.sync_status,
-        LocalAttendance.class_name,
-        LocalAttendance.time_slot,
         LocalAttendance.date,
+        LocalAttendance.check_in_time,
+        LocalAttendance.check_out_time,
+        LocalAttendance.sync_status,
         Students.name,
         Students.photo_url
       FROM LocalAttendance
       LEFT JOIN Students ON Students.unique_student_id = LocalAttendance.unique_student_id
-      WHERE LocalAttendance.timestamp >= ? AND LocalAttendance.timestamp < ?
-      ORDER BY LocalAttendance.timestamp DESC
-    ''', [
-      startOfDay.toIso8601String(),
-      endOfDay.toIso8601String(),
-    ]);
+      WHERE LocalAttendance.date = ?
+      ORDER BY COALESCE(LocalAttendance.check_out_time, LocalAttendance.check_in_time) DESC
+    ''', [dateStr]);
   }
 
   Future<List<Map<String, Object?>>> getFilteredAttendance(
-    DateTime date, {
-    String? className,
-    String? timeSlot,
-  }) async {
+    DateTime date,
+  ) async {
     final db = await database;
-    
     final formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
     
-    final startOfDay = DateTime(date.year, date.month, date.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-
-    String whereClause = "((LocalAttendance.date = ?) OR (LocalAttendance.timestamp >= ? AND LocalAttendance.timestamp < ?))";
-    List<Object?> whereArgs = [
-      formattedDate,
-      startOfDay.toIso8601String(),
-      endOfDay.toIso8601String(),
-    ];
-
-    if (className != null && className.trim().isNotEmpty) {
-      whereClause += " AND LocalAttendance.class_name = ?";
-      whereArgs.add(className.trim());
-    }
-
-    if (timeSlot != null && timeSlot.trim().isNotEmpty && timeSlot != 'All') {
-      whereClause += " AND LocalAttendance.time_slot = ?";
-      whereArgs.add(timeSlot.trim());
-    }
-
     return db.rawQuery('''
       SELECT
         LocalAttendance.id,
         LocalAttendance.unique_student_id,
-        LocalAttendance.timestamp,
-        LocalAttendance.status,
-        LocalAttendance.sync_status,
-        LocalAttendance.class_name,
-        LocalAttendance.time_slot,
         LocalAttendance.date,
+        LocalAttendance.check_in_time,
+        LocalAttendance.check_out_time,
+        LocalAttendance.sync_status,
         Students.name,
         Students.photo_url
       FROM LocalAttendance
       LEFT JOIN Students ON Students.unique_student_id = LocalAttendance.unique_student_id
-      WHERE $whereClause
-      ORDER BY LocalAttendance.timestamp DESC
-    ''', whereArgs);
+      WHERE LocalAttendance.date = ?
+      ORDER BY COALESCE(LocalAttendance.check_out_time, LocalAttendance.check_in_time) DESC
+    ''', [formattedDate]);
   }
 }

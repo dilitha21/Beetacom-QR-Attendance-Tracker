@@ -60,20 +60,16 @@ class AttendanceSyncService {
       );
     }
 
-    final payload = {
-      'attendanceRecords': pendingRows
-          .map(
-            (row) => {
-              'unique_student_id': row['unique_student_id'],
-              'timestamp': row['timestamp'],
-              'sync_status': row['sync_status'],
-              'class_name': row['class_name'],
-              'time_slot': row['time_slot'],
-              'date': row['date'],
-            },
-          )
-          .toList(),
-    };
+    final payload = pendingRows
+        .map(
+          (row) => {
+            'unique_student_id': row['unique_student_id'],
+            'date': row['date'],
+            'check_in_time': row['check_in_time'],
+            'check_out_time': row['check_out_time'],
+          },
+        )
+        .toList();
 
     try {
       final response = await http
@@ -94,7 +90,7 @@ class AttendanceSyncService {
 
       final decodedBody = jsonDecode(response.body);
       final message = decodedBody is Map<String, dynamic> ? decodedBody['message']?.toString() ?? '' : '';
-      final isSuccessMessage = message.toLowerCase().contains('success');
+      final isSuccessMessage = message.toLowerCase().contains('completed') || message.toLowerCase().contains('success');
 
       if (!isSuccessMessage) {
         return AttendanceSyncResult(
@@ -117,7 +113,7 @@ class AttendanceSyncService {
       return AttendanceSyncResult(
         success: true,
         syncedCount: syncedIds.length,
-        message: message,
+        message: 'Successfully synced ${syncedIds.length} records.',
       );
     } catch (error) {
       return AttendanceSyncResult(
